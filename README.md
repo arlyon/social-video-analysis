@@ -117,6 +117,324 @@ This project includes CI/CD workflows for both GitHub and GitLab:
 - **GitHub**: `.github/workflows/tinybird-ci.yml` and `.github/workflows/tinybird-cd.yml`
 - **GitLab**: `.gitlab-ci.yml`, `.gitlab/tinybird/tinybird-ci.yml`, and `.gitlab/tinybird/tinybird-cd.yml`
 
+## Usage
+
+### Submitting Data to the API
+
+Tinybird uses the [Events API](https://www.tinybird.co/docs/forward/get-data-in/events-api) to ingest data. You can submit JSON data to any datasource using HTTP POST requests.
+
+#### Submit Artists
+
+```bash
+# Local
+curl -X POST "http://localhost:7181/v0/events?name=artists&token=admin%20local_testing@tinybird.co" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "name": "Taylor Swift",
+    "follower_count": 95000000
+  }'
+
+# Cloud (replace YOUR_TOKEN with an admin token)
+curl -X POST "https://api.tinybird.co/v0/events?name=artists" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "name": "Taylor Swift",
+    "follower_count": 95000000
+  }'
+```
+
+#### Submit Videos
+
+```bash
+# Local
+curl -X POST "http://localhost:7181/v0/events?name=videos&token=admin%20local_testing@tinybird.co" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": "660e8400-e29b-41d4-a716-446655440001",
+    "name": "Live Performance at MSG",
+    "view_count": 1500000,
+    "hashtags": ["live", "concert", "music"],
+    "music_playing": "Anti-Hero",
+    "artist_id": "550e8400-e29b-41d4-a716-446655440000"
+  }'
+
+# Cloud
+curl -X POST "https://api.tinybird.co/v0/events?name=videos" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": "660e8400-e29b-41d4-a716-446655440001",
+    "name": "Live Performance at MSG",
+    "view_count": 1500000,
+    "hashtags": ["live", "concert", "music"],
+    "music_playing": "Anti-Hero",
+    "artist_id": "550e8400-e29b-41d4-a716-446655440000"
+  }'
+```
+
+#### Submit Comments
+
+```bash
+# Local
+curl -X POST "http://localhost:7181/v0/events?name=comments&token=admin%20local_testing@tinybird.co" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": "770e8400-e29b-41d4-a716-446655440002",
+    "name": "music_fan_123",
+    "comment_contents": "This performance was absolutely incredible!",
+    "likes": 245,
+    "video_id": "660e8400-e29b-41d4-a716-446655440001"
+  }'
+
+# Cloud
+curl -X POST "https://api.tinybird.co/v0/events?name=comments" \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": "770e8400-e29b-41d4-a716-446655440002",
+    "name": "music_fan_123",
+    "comment_contents": "This performance was absolutely incredible!",
+    "likes": 245,
+    "video_id": "660e8400-e29b-41d4-a716-446655440001"
+  }'
+```
+
+### Building a Sentiment Analysis Bot
+
+Create a bot that continuously analyzes unprocessed comments and writes the results back to Tinybird.
+
+#### Example Python Bot
+
+```python
+import requests
+import time
+from datetime import datetime
+import uuid
+
+# Configuration
+TINYBIRD_BASE_URL = "https://api.tinybird.co"  # or http://localhost:7181 for local
+TINYBIRD_TOKEN = "YOUR_TOKEN"  # or "admin local_testing@tinybird.co" for local
+
+def get_unanalyzed_comments():
+    """Fetch comments that haven't been analyzed yet."""
+    url = f"{TINYBIRD_BASE_URL}/v0/pipes/unanalyzed_comments.json"
+    headers = {"Authorization": f"Bearer {TINYBIRD_TOKEN}"}
+
+    response = requests.get(url, headers=headers)
+    response.raise_for_status()
+
+    return response.json()["data"]
+
+def analyze_sentiment(comment_text):
+    """
+    Analyze sentiment of a comment.
+    Replace this with your actual sentiment analysis logic
+    (e.g., using OpenAI, Hugging Face, or another ML service).
+    """
+    # This is a placeholder - use your actual sentiment analysis
+    # Example: OpenAI, Anthropic Claude, Hugging Face Transformers, etc.
+
+    # Dummy sentiment analysis for demonstration
+    if any(word in comment_text.lower() for word in ["amazing", "incredible", "love", "great"]):
+        return {
+            "sentiment_score": 0.85,
+            "sentiment_label": "positive",
+            "confidence_score": 0.92
+        }
+    elif any(word in comment_text.lower() for word in ["bad", "terrible", "hate", "worst"]):
+        return {
+            "sentiment_score": -0.75,
+            "sentiment_label": "negative",
+            "confidence_score": 0.88
+        }
+    else:
+        return {
+            "sentiment_score": 0.0,
+            "sentiment_label": "neutral",
+            "confidence_score": 0.65
+        }
+
+def submit_analyzed_comment(comment_id, sentiment_data):
+    """Submit analyzed comment data to Tinybird."""
+    url = f"{TINYBIRD_BASE_URL}/v0/events?name=analyzed_comments"
+    headers = {
+        "Authorization": f"Bearer {TINYBIRD_TOKEN}",
+        "Content-Type": "application/json"
+    }
+
+    payload = {
+        "comment_id": comment_id,
+        "sentiment_score": sentiment_data["sentiment_score"],
+        "sentiment_label": sentiment_data["sentiment_label"],
+        "confidence_score": sentiment_data["confidence_score"],
+        "analyzed_at": datetime.utcnow().isoformat()
+    }
+
+    response = requests.post(url, headers=headers, json=payload)
+    response.raise_for_status()
+
+    return response.json()
+
+def run_sentiment_bot(interval=10):
+    """
+    Run the sentiment analysis bot continuously.
+
+    Args:
+        interval: Seconds to wait between checks (default: 10)
+    """
+    print(f"Starting sentiment analysis bot... (checking every {interval}s)")
+
+    while True:
+        try:
+            # Get unanalyzed comments
+            comments = get_unanalyzed_comments()
+
+            if not comments:
+                print("No unanalyzed comments found. Waiting...")
+                time.sleep(interval)
+                continue
+
+            print(f"Processing {len(comments)} comments...")
+
+            # Process each comment
+            for comment in comments:
+                try:
+                    comment_id = comment["id"]
+                    comment_text = comment["comment_contents"]
+
+                    print(f"Analyzing comment {comment_id[:8]}...")
+
+                    # Analyze sentiment
+                    sentiment = analyze_sentiment(comment_text)
+
+                    # Submit to Tinybird
+                    submit_analyzed_comment(comment_id, sentiment)
+
+                    print(f"✓ Comment {comment_id[:8]} analyzed: {sentiment['sentiment_label']}")
+
+                except Exception as e:
+                    print(f"✗ Error processing comment {comment_id[:8]}: {e}")
+                    continue
+
+            print(f"Batch complete. Waiting {interval}s...")
+            time.sleep(interval)
+
+        except KeyboardInterrupt:
+            print("\nBot stopped by user.")
+            break
+        except Exception as e:
+            print(f"Error in main loop: {e}")
+            time.sleep(interval)
+
+if __name__ == "__main__":
+    run_sentiment_bot(interval=10)
+```
+
+Save this as `sentiment_bot.py` and run:
+
+```bash
+pip install requests
+python sentiment_bot.py
+```
+
+### Viewing Live Sentiment Data
+
+#### Get Video Sentiment
+
+```bash
+# Get sentiment for all videos
+curl "http://localhost:7181/v0/pipes/videos_by_sentiment.json?token=admin%20local_testing@tinybird.co"
+
+# Cloud
+curl -H "Authorization: Bearer YOUR_TOKEN" \
+  "https://api.tinybird.co/v0/pipes/videos_by_sentiment.json"
+```
+
+#### Get Artist Sentiment
+
+```bash
+# Get sentiment for all artists
+curl "http://localhost:7181/v0/pipes/artists_by_sentiment.json?token=admin%20local_testing@tinybird.co"
+
+# Cloud
+curl -H "Authorization: Bearer YOUR_TOKEN" \
+  "https://api.tinybird.co/v0/pipes/artists_by_sentiment.json"
+```
+
+#### Get Detailed Artist Stats
+
+```bash
+# Get comment statistics for all artists
+curl "http://localhost:7181/v0/pipes/artists_comments.json?token=admin%20local_testing@tinybird.co"
+
+# Get view statistics for all artists
+curl "http://localhost:7181/v0/pipes/artists_views.json?token=admin%20local_testing@tinybird.co"
+```
+
+#### Get Video Comments
+
+```bash
+# Get comment statistics for all videos
+curl "http://localhost:7181/v0/pipes/video_comments.json?token=admin%20local_testing@tinybird.co"
+```
+
+### Real-time Dashboard Example
+
+You can build a real-time dashboard by polling these endpoints. Here's a simple HTML example:
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+    <title>YouTube Sentiment Dashboard</title>
+    <script>
+        const TINYBIRD_URL = 'http://localhost:7181';
+        const TOKEN = 'admin local_testing@tinybird.co';
+
+        async function fetchArtistSentiment() {
+            const response = await fetch(
+                `${TINYBIRD_URL}/v0/pipes/artists_by_sentiment.json?token=${encodeURIComponent(TOKEN)}`
+            );
+            const data = await response.json();
+            displayData('artists', data.data);
+        }
+
+        async function fetchVideoSentiment() {
+            const response = await fetch(
+                `${TINYBIRD_URL}/v0/pipes/videos_by_sentiment.json?token=${encodeURIComponent(TOKEN)}`
+            );
+            const data = await response.json();
+            displayData('videos', data.data);
+        }
+
+        function displayData(type, data) {
+            const container = document.getElementById(type);
+            container.innerHTML = `<h2>${type.toUpperCase()}</h2>` +
+                data.map(item => `<div>${JSON.stringify(item)}</div>`).join('');
+        }
+
+        // Refresh every 5 seconds
+        setInterval(() => {
+            fetchArtistSentiment();
+            fetchVideoSentiment();
+        }, 5000);
+
+        // Initial load
+        fetchArtistSentiment();
+        fetchVideoSentiment();
+    </script>
+</head>
+<body>
+    <h1>Real-time Sentiment Dashboard</h1>
+    <div id="artists"></div>
+    <div id="videos"></div>
+</body>
+</html>
+```
+
 ## Testing
 
 Run tests to validate your pipes:
