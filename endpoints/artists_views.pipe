@@ -1,0 +1,16 @@
+DESCRIPTION >
+    Endpoint to get aggregated artist view statistics from materialized view
+
+NODE artists_views_data
+SQL >
+    SELECT
+        id,
+        name,
+        follower_count,
+        sumMerge(total_views) as total_views,
+        countMerge(video_count) as video_count
+    FROM artists_views_mv
+    GROUP BY id, name, follower_count
+    ORDER BY total_views DESC
+
+TYPE endpoint

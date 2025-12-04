@@ -1,0 +1,12 @@
+DESCRIPTION >
+    Store comments with sentiment analysis results including sentiment score and classification
+
+SCHEMA >
+    `comment_id` UUID `json:$.comment_id`,
+    `sentiment_score` Float32 `json:$.sentiment_score`,
+    `sentiment_label` String `json:$.sentiment_label`,
+    `confidence_score` Float32 `json:$.confidence_score`,
+    `analyzed_at` DateTime `json:$.analyzed_at`
+
+ENGINE "MergeTree"
+ENGINE_SORTING_KEY "comment_id"

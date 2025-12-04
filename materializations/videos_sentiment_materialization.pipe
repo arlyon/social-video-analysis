@@ -1,0 +1,17 @@
+DESCRIPTION >
+    Materialize video-level sentiment aggregations at ingest time
+
+NODE videos_sentiment_agg
+SQL >
+    SELECT
+        c.video_id,
+        avgState(ac.sentiment_score) as avg_sentiment_score,
+        countState(ac.comment_id) as analyzed_comments_count
+    FROM analyzed_comments ac
+    INNER JOIN comments c ON ac.comment_id = c.id
+    WHERE ac.sentiment_score IS NOT NULL
+        AND c.video_id IS NOT NULL
+    GROUP BY c.video_id
+
+TYPE MATERIALIZED
+DATASOURCE videos_sentiment_mv

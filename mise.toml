@@ -1,0 +1,7 @@
+[env]
+DOCKER_HOST = 'unix:///run/user/1000/podman/podman.sock'
+TB_LOCAL_HOST="127.0.0.1"
+TB_LOCAL_PORT="7181"
+
+[tasks.tb-local]
+run = "podman run --platform linux/amd64 -p 7181:7181 --name tinybird-local -d tinybirdco/tinybird-local:latest"

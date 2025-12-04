@@ -1,0 +1,17 @@
+DESCRIPTION >
+    Get artists ranked by their average sentiment score from analyzed comments
+
+NODE artists_sentiment_data
+SQL >
+    SELECT
+        a.name as artist_name,
+        avgMerge(vsm.avg_sentiment_score) as avg_sentiment_score,
+        countMerge(vsm.analyzed_comments_count) as analyzed_comments_count,
+        count(vsm.video_id) as video_count
+    FROM videos_sentiment_mv vsm
+    INNER JOIN videos v ON vsm.video_id = v.id
+    INNER JOIN artists a ON v.artist_id = a.id
+    GROUP BY a.name
+    ORDER BY avg_sentiment_score DESC
+
+TYPE endpoint

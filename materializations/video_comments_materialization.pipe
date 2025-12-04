@@ -1,0 +1,17 @@
+DESCRIPTION >
+    Materialize video comment data
+
+NODE video_comments_agg
+SQL >
+    SELECT
+        v.id as video_id,
+        v.name as video_name,
+        c.id as comment_id,
+        c.name as comment_name,
+        c.comment_contents,
+        c.likes
+    FROM videos v
+    LEFT JOIN comments c ON v.id = c.video_id
+
+TYPE MATERIALIZED
+DATASOURCE video_comments_mv

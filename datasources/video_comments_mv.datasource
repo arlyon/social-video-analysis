@@ -1,0 +1,13 @@
+DESCRIPTION >
+    Materialized view of video comment data
+
+SCHEMA >
+    `video_id` UUID,
+    `video_name` String,
+    `comment_id` UUID,
+    `comment_name` String,
+    `comment_contents` String,
+    `likes` UInt64
+
+ENGINE "MergeTree"
+ENGINE_SORTING_KEY "video_id, comment_id"

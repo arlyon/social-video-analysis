@@ -1,0 +1,12 @@
+DESCRIPTION >
+    Store video content with metadata including ID, name, view count, hashtags, associated music and artist reference
+
+SCHEMA >
+    `id` UUID `json:$.id`,
+    `name` String `json:$.name`,
+    `view_count` UInt64 `json:$.view_count`,
+    `hashtags` Array(String) `json:$.hashtags[:]`,
+    `music_playing` String `json:$.music_playing`,
+    `artist_id` UUID `json:$.artist_id`
+
+ENGINE "MergeTree"

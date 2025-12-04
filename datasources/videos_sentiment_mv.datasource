@@ -1,0 +1,10 @@
+DESCRIPTION >
+    Materialized view of video-level sentiment aggregations
+
+SCHEMA >
+    `video_id` UUID,
+    `avg_sentiment_score` AggregateFunction(avg, Float32),
+    `analyzed_comments_count` AggregateFunction(count, UUID)
+
+ENGINE "AggregatingMergeTree"
+ENGINE_SORTING_KEY "video_id"

@@ -1,0 +1,17 @@
+DESCRIPTION >
+    Endpoint to get aggregated artist comment statistics from materialized view
+
+NODE artists_comments_data
+SQL >
+    SELECT
+        id,
+        name,
+        follower_count,
+        countDistinctMerge(video_count) as video_count,
+        countMerge(total_comments) as total_comments,
+        sumMerge(total_comment_likes) as total_comment_likes
+    FROM artists_comments_mv
+    GROUP BY id, name, follower_count
+    ORDER BY total_comments DESC
+
+TYPE endpoint

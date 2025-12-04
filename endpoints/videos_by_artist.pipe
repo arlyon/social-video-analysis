@@ -1,0 +1,20 @@
+DESCRIPTION >
+    Get all videos for a specific artist with metadata
+
+NODE videos_by_artist_data
+SQL >
+    %
+    SELECT 
+        v.id,
+        v.name,
+        v.view_count,
+        v.hashtags,
+        v.music_playing,
+        a.name as artist_name,
+        a.follower_count
+    FROM videos v
+    JOIN artists a ON v.artist_id = a.id
+    WHERE a.id = {{String(artist_id, '00000000-0000-0000-0000-000000000000')}}
+    ORDER BY v.view_count DESC
+
+TYPE endpoint

@@ -1,0 +1,17 @@
+DESCRIPTION >
+    Materialize artist view aggregations
+
+NODE artists_views_agg
+SQL >
+    SELECT
+        a.id,
+        a.name,
+        a.follower_count,
+        sumState(v.view_count) as total_views,
+        countState(v.id) as video_count
+    FROM artists a
+    LEFT JOIN videos v ON a.id = v.artist_id
+    GROUP BY a.id, a.name, a.follower_count
+
+TYPE MATERIALIZED
+DATASOURCE artists_views_mv

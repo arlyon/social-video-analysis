@@ -1,0 +1,21 @@
+DESCRIPTION >
+    Get videos ranked by their average sentiment score from comment analysis
+
+NODE videos_sentiment_data
+SQL >
+    SELECT
+        vsm.video_id,
+        v.name as video_name,
+        v.view_count,
+        v.hashtags,
+        v.music_playing,
+        a.name as artist_name,
+        avgMerge(vsm.avg_sentiment_score) as avg_sentiment_score,
+        countMerge(vsm.analyzed_comments_count) as analyzed_comments_count
+    FROM videos_sentiment_mv vsm
+    INNER JOIN videos v ON vsm.video_id = v.id
+    LEFT JOIN artists a ON v.artist_id = a.id
+    GROUP BY vsm.video_id, v.name, v.view_count, v.hashtags, v.music_playing, a.name
+    ORDER BY avg_sentiment_score DESC
+
+TYPE endpoint

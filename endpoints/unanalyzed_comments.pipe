@@ -1,0 +1,18 @@
+DESCRIPTION >
+    Get comments that don't have sentiment analysis yet
+
+NODE unanalyzed_comments_data
+SQL >
+    SELECT
+        c.id,
+        c.name,
+        c.comment_contents,
+        c.likes,
+        c.video_id
+    FROM comments c
+    LEFT JOIN analyzed_comments ac ON c.id = ac.comment_id
+    WHERE ac.comment_id IS NULL
+    ORDER BY c.likes DESC
+
+SETTINGS join_use_nulls = 1
+TYPE endpoint

@@ -1,0 +1,13 @@
+DESCRIPTION >
+    Materialized view of artist comment aggregations
+
+SCHEMA >
+    `name` String,
+    `id` UUID,
+    `follower_count` UInt64,
+    `video_count` AggregateFunction(countDistinct, UUID),
+    `total_comments` AggregateFunction(count, UUID),
+    `total_comment_likes` AggregateFunction(sum, UInt64)
+
+ENGINE "AggregatingMergeTree"
+ENGINE_SORTING_KEY "id, name, follower_count"

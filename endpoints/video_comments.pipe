@@ -1,0 +1,18 @@
+DESCRIPTION >
+    Endpoint to get video comment data from materialized view
+
+NODE video_comments_data
+SQL >
+    %
+    SELECT
+        video_id,
+        video_name,
+        comment_id,
+        comment_name,
+        comment_contents,
+        likes
+    FROM video_comments_mv
+    WHERE video_id = {{String(video_id, '00000000-0000-0000-0000-000000000000')}}
+    ORDER BY likes DESC
+
+TYPE endpoint

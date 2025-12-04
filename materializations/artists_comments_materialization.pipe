@@ -1,0 +1,19 @@
+DESCRIPTION >
+    Materialize artist comment aggregations
+
+NODE artists_comments_agg
+SQL >
+    SELECT
+        a.name as name,
+        a.id as id,
+        a.follower_count as follower_count,
+        countDistinctState(v.id) as video_count,
+        countState(c.id) as total_comments,
+        sumState(c.likes) as total_comment_likes
+    FROM artists a
+    LEFT JOIN videos v ON a.id = v.artist_id
+    LEFT JOIN comments c ON v.id = c.video_id
+    GROUP BY a.name, a.id, a.follower_count
+
+TYPE MATERIALIZED
+DATASOURCE artists_comments_mv

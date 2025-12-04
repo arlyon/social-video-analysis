@@ -1,0 +1,11 @@
+DESCRIPTION >
+    Store user comments with ID, name, content, like counts and video reference
+
+SCHEMA >
+    `id` UUID `json:$.id`,
+    `name` String `json:$.name`,
+    `comment_contents` String `json:$.comment_contents`,
+    `likes` UInt64 `json:$.likes`,
+    `video_id` UUID `json:$.video_id`
+
+ENGINE "MergeTree"

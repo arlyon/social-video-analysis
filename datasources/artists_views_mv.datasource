@@ -1,0 +1,12 @@
+DESCRIPTION >
+    Materialized view of artist view aggregations
+
+SCHEMA >
+    `id` UUID,
+    `name` String,
+    `follower_count` UInt64,
+    `total_views` AggregateFunction(sum, UInt64),
+    `video_count` AggregateFunction(count, UUID)
+
+ENGINE "AggregatingMergeTree"
+ENGINE_SORTING_KEY "id, name, follower_count"

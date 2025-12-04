@@ -1,0 +1,13 @@
+DESCRIPTION >
+    Endpoint to list all artists with their follower count
+
+NODE all_artists_data
+SQL >
+    SELECT 
+        id,
+        name,
+        follower_count
+    FROM artists
+    ORDER BY follower_count DESC
+
+TYPE endpoint

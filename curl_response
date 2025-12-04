@@ -1,0 +1,65 @@
+#!/bin/sh
+# shellcheck shell=dash
+
+set -u
+
+APP_NAME="tinybird"
+
+INSTALLATION_CODE="${1:-}"
+
+
+notify_tinybird() {
+  # notify_tinybird <status> [message]
+  if [ -z "$INSTALLATION_CODE" ]; then
+    return
+  fi
+
+  status="$1"
+  msg="${2:-}"
+
+  url="https://cloud.tinybird.co/api/install/$INSTALLATION_CODE"
+
+  curl -sS -X POST \
+    --data-urlencode "status=$status" \
+    --data-urlencode "msg=$msg" \
+    -o /dev/null \
+    "$url" || printf "\n⚠️  Unable to notify Tinybird about this installation.\n"
+}
+
+
+echo "Installing Tinybird CLI..."
+# Step 1: install uv
+if command -v uv >/dev/null 2>&1; then
+  :
+else
+  if ! output="$(curl -LsSf https://astral.sh/uv/install.sh | sh 2>&1)"; then
+    echo "❌ Failed to install uv"
+    echo "$output"
+    notify_tinybird "error" "$output"
+    exit 1
+  fi
+fi
+
+
+export PATH="$HOME/.local/bin:$PATH"
+
+# Step 3: install tinybird
+if ! output="$(uv tool install "$APP_NAME" --python 3.11 --force 2>&1)"; then
+  echo "❌ Failed to install $APP_NAME"
+  echo "$output"
+  notify_tinybird "error" "$output"
+  exit 1
+fi
+
+notify_tinybird "success"
+
+echo "\n🎉 CLI installed successfully! The analytics backend for your application is ready to use."
+
+echo "\nTo use it, add this directory to your PATH: \`export PATH=\"$HOME/.local/bin:\$PATH\"\` or \`uv tool update-shell\`"
+echo "\nNext steps:"
+echo "1️⃣  Run \`tb login\` to authenticate."
+echo "2️⃣  Run \`tb local start\` to start the Tinybird Local container."
+echo "3️⃣  Create your first project:"
+echo "    \`tb create --prompt \"a project to track user behavior in my website\"\`"
+
+printf "\nNeed help? Follow the quick start guide: https://tbrd.co/quickstart.\n"
