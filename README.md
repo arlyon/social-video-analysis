@@ -23,14 +23,38 @@ This project provides real-time analytics on YouTube comments, tracking sentimen
 
 ## Data Sources
 
-- **artists**: Artist information and metadata
-- **videos**: YouTube video details
+- **artists**: Artist information and metadata (uses ReplacingMergeTree for updates)
+- **videos**: YouTube video details (uses ReplacingMergeTree for updates)
 - **comments**: Raw YouTube comments
 - **analyzed_comments**: Comments with sentiment analysis
 - **artists_comments_mv**: Materialized view of artist comment aggregations
 - **artists_views_mv**: Materialized view of artist view statistics
 - **video_comments_mv**: Materialized view of video comment statistics
 - **videos_sentiment_mv**: Materialized view of video sentiment analysis
+
+### About ReplacingMergeTree
+
+This project uses **ReplacingMergeTree** engine for `artists`, `videos`, and `comments` datasources. ReplacingMergeTree is a special ClickHouse table engine that automatically handles updates by keeping only the latest version of rows with the same sorting key.
+
+**Why ReplacingMergeTree?**
+- Allows you to update artist follower counts by simply inserting new records with the same `id`
+- Enables video view count updates without complex update queries
+- Tracks comment like count changes over time
+- ClickHouse automatically deduplicates rows during merge operations
+- Perfect for dimension tables that receive occasional updates
+
+**How it works:**
+Each datasource uses `observed_at` as the version column (configured with `ENGINE_VER "observed_at"`). When you insert a new row with an existing `id`, both rows are temporarily stored. During background merge operations, ClickHouse keeps only the row with the highest `observed_at` timestamp. This ensures you always get the most recent observation.
+
+To force immediate deduplication in queries, use `FINAL`:
+
+```sql
+SELECT * FROM artists FINAL WHERE id = '550e8400-e29b-41d4-a716-446655440000'
+```
+
+**Important:** Always include a newer `observed_at` timestamp when updating records, otherwise the old record might be kept if it has a more recent timestamp.
+
+Note: Most endpoints automatically handle this, but for direct queries or testing, remember to use `FINAL` for guaranteed latest data.
 
 ## Available Endpoints
 
@@ -132,7 +156,8 @@ curl -X POST "http://localhost:7181/v0/events?name=artists&token=admin%20local_t
   -d '{
     "id": "550e8400-e29b-41d4-a716-446655440000",
     "name": "Taylor Swift",
-    "follower_count": 95000000
+    "follower_count": 95000000,
+    "observed_at": "2024-01-15T10:30:00"
   }'
 
 # Cloud (replace YOUR_TOKEN with an admin token)
@@ -142,7 +167,8 @@ curl -X POST "https://api.tinybird.co/v0/events?name=artists" \
   -d '{
     "id": "550e8400-e29b-41d4-a716-446655440000",
     "name": "Taylor Swift",
-    "follower_count": 95000000
+    "follower_count": 95000000,
+    "observed_at": "2024-01-15T10:30:00"
   }'
 ```
 
@@ -158,7 +184,8 @@ curl -X POST "http://localhost:7181/v0/events?name=videos&token=admin%20local_te
     "view_count": 1500000,
     "hashtags": ["live", "concert", "music"],
     "music_playing": "Anti-Hero",
-    "artist_id": "550e8400-e29b-41d4-a716-446655440000"
+    "artist_id": "550e8400-e29b-41d4-a716-446655440000",
+    "observed_at": "2024-01-15T10:30:00"
   }'
 
 # Cloud
@@ -171,7 +198,8 @@ curl -X POST "https://api.tinybird.co/v0/events?name=videos" \
     "view_count": 1500000,
     "hashtags": ["live", "concert", "music"],
     "music_playing": "Anti-Hero",
-    "artist_id": "550e8400-e29b-41d4-a716-446655440000"
+    "artist_id": "550e8400-e29b-41d4-a716-446655440000",
+    "observed_at": "2024-01-15T10:30:00"
   }'
 ```
 
@@ -186,7 +214,8 @@ curl -X POST "http://localhost:7181/v0/events?name=comments&token=admin%20local_
     "name": "music_fan_123",
     "comment_contents": "This performance was absolutely incredible!",
     "likes": 245,
-    "video_id": "660e8400-e29b-41d4-a716-446655440001"
+    "video_id": "660e8400-e29b-41d4-a716-446655440001",
+    "observed_at": "2024-01-15T10:30:00"
   }'
 
 # Cloud
@@ -198,9 +227,41 @@ curl -X POST "https://api.tinybird.co/v0/events?name=comments" \
     "name": "music_fan_123",
     "comment_contents": "This performance was absolutely incredible!",
     "likes": 245,
-    "video_id": "660e8400-e29b-41d4-a716-446655440001"
+    "video_id": "660e8400-e29b-41d4-a716-446655440001",
+    "observed_at": "2024-01-15T10:30:00"
   }'
 ```
+
+#### Updating Artists and Videos (ReplacingMergeTree)
+
+Thanks to ReplacingMergeTree, you can update artist follower counts or video view counts by simply inserting a new record with the same `id`. The engine automatically keeps the latest version based on the `observed_at` timestamp.
+
+```bash
+# Update artist follower count - just insert with same id and newer timestamp
+curl -X POST "http://localhost:7181/v0/events?name=artists&token=admin%20local_testing@tinybird.co" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": "550e8400-e29b-41d4-a716-446655440000",
+    "name": "Taylor Swift",
+    "follower_count": 96000000,
+    "observed_at": "2024-01-15T12:00:00"
+  }'
+
+# Update video view count - just insert with same id and newer timestamp
+curl -X POST "http://localhost:7181/v0/events?name=videos&token=admin%20local_testing@tinybird.co" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": "660e8400-e29b-41d4-a716-446655440001",
+    "name": "Live Performance at MSG",
+    "view_count": 1550000,
+    "hashtags": ["live", "concert", "music"],
+    "music_playing": "Anti-Hero",
+    "artist_id": "550e8400-e29b-41d4-a716-446655440000",
+    "observed_at": "2024-01-15T12:00:00"
+  }'
+```
+
+The old records will be automatically replaced during ClickHouse's background merge operations. Your queries will always return the latest data based on the most recent `observed_at` timestamp.
 
 ### Building a Sentiment Analysis Bot
 

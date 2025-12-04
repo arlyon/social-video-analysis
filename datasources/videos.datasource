@@ -7,6 +7,9 @@ SCHEMA >
     `view_count` UInt64 `json:$.view_count`,
     `hashtags` Array(String) `json:$.hashtags[:]`,
     `music_playing` String `json:$.music_playing`,
-    `artist_id` UUID `json:$.artist_id`
+    `artist_id` UUID `json:$.artist_id`,
+    `observed_at` DateTime `json:$.observed_at`
 
-ENGINE "MergeTree"
+ENGINE "ReplacingMergeTree"
+ENGINE_VER "observed_at"
+ENGINE_SORTING_KEY "id"
