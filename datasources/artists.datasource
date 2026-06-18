@@ -4,6 +4,9 @@ DESCRIPTION >
 SCHEMA >
     `id` UUID `json:$.id`,
     `name` String `json:$.name`,
-    `follower_count` UInt64 `json:$.follower_count`
+    `follower_count` UInt64 `json:$.follower_count`,
+    `observed_at` DateTime `json:$.observed_at`
 
-ENGINE "MergeTree"
+ENGINE "ReplacingMergeTree"
+ENGINE_VER "observed_at"
+ENGINE_SORTING_KEY "id"
